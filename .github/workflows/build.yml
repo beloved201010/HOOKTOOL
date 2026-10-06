@@ -1,4 +1,4 @@
-name: Build APK (Command Line Fix)
+name: Build APK (Final Safe Fix)
 
 on:
   push:
@@ -19,24 +19,44 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle Version (Force 8.4)
+      - name: Force Set Gradle Version
         run: |
           curl -L "https://services.gradle.org/distributions/gradle-8.4-bin.zip" -o gradle-8.4-bin.zip
           unzip -q gradle-8.4-bin.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Force Clean and Purge Cache
+      - name: Add Repositories Safely (Auto-append)
         run: |
-          rm -rf ~/.gradle/caches/
-          rm -rf .gradle/
-          gradle clean --no-daemon --stacktrace
+          # 1. 定义要补充的标准仓库代码
+          APPEND_BLOCK=$(cat <<'EOF'
+          
+          // Auto-added repositories for CI build
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven { url = 'https://jitpack.io' }
+              }
+          }
+          EOF
+          )
+          
+          # 2. 遍历项目中的所有 build.gradle 文件
+          for file in $(find . -name "build.gradle" -not -path './.gradle/*'); do
+            # 3. 检查文件里有没有 google()，如果没有，直接在文件末尾把仓库代码追加进去
+            if ! grep -q "google()" "$file"; then
+              echo "$APPEND_BLOCK" >> "$file"
+              echo "Successfully added repositories to $file"
+            else
+              echo "Repositories already exist in $file, skipping."
+            fi
+          done
 
-      - name: Build APK (Hardcoded Repos)
-        # 直接在命令行里用 -P 参数把仓库地址塞给 Gradle，彻底绕过项目文件的配置
-        run: gradle assembleDebug -Pallprojects.repositories="google(), mavenCentral(), maven { url 'https://jitpack.io' }" --no-daemon --stacktrace --info
+      - name: Clean and Build APK
+        run: gradle assembleDebug --no-daemon --stacktrace --info
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hooktool-debug-cli
+          name: hooktool-debug-final
           path: app/build/outputs/apk/debug/app-debug.apk
