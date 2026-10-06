@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK (Modern Fast Build)
 
 on:
   push:
@@ -7,26 +7,24 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build APK with Gradle
-        run: ./gradlew assembleDebug
+      - name: Build with Native Gradle
+        run: |
+          # 直接调用云端最新环境自带的 Gradle
+          gradle assembleDebug
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
