@@ -18,12 +18,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: Build with Gradle
-        run: |
+              run: |
           if [ -f ./gradlew ]; then
             chmod +x ./gradlew
-            ./gradlew assembleDebug --no-daemon
+            ./gradlew assembleDebug --warning-mode=none --no-daemon
           else
-            gradle assembleDebug --no-daemon
+            gradle assembleDebug --warning-mode=none --no-daemon
           fi
 
             
