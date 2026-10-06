@@ -19,19 +19,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Gradle 8.4
+      - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
-        with:
-          gradle-version: '8.4'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Force clean with cloud Gradle
+        # 注意这里去掉了 "./gradlew"，直接使用云端的 "gradle"
+        run: gradle clean --no-daemon
 
-      - name: Clean Gradle Cache
-        run: ./gradlew clean
-
-      - name: Build with Gradle
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+      - name: Build with cloud Gradle
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
