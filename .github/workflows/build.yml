@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK
@@ -22,7 +22,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
+      # 核心修复：给 gradlew 文件加上执行权限
+      - name: Fix gradlew permissions
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
