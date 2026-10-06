@@ -1,4 +1,4 @@
-name: Build APK (Ultimate Fix)
+name: Build APK (Final Fix)
 
 on:
   push:
@@ -25,64 +25,53 @@ jobs:
           unzip -q gradle-8.4-bin.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Inject Repositories Safely
-        # 这是一个超级安全的脚本，它会智能识别 .gradle 和 .gradle.kts 文件并注入仓库
+      - name: Inject Repositories (Smart Replace)
         shell: bash
         run: |
-          # Groovy DSL 文件注入规则
-          sed -i '/^$/d' . 2>/dev/null || true
-          GROOVY_INJECT=$(cat <<EOF
-
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          EOF
-          )
-          
-          # 遍历所有 build.gradle 文件
-          for file in $(find . -name "build.gradle"); do
-            echo "Processing Groovy file: $file"
-            if ! grep -q "google()" "$file" 2>/dev/null; then
-              echo "$GROOVY_INJECT" >> "$file"
+          # 针对 Groovy DSL (.gradle) 文件的替换逻辑
+          # 删除原有的 repositories 闭包，然后用一个全新的、无冲突的 allprojects 块替换
+          for file in $(find . -name "build.gradle" ! -path "*/node_modules/*"); do
+            if [ -f "$file" ]; then
+              # 先删除原有的 repositories 块，防止冲突
+              sed -i '/^[[:space:]]*repositories[[:space:]]*{/,/^[[:space:]]*}/d' "$file"
+              # 在文件末尾追加全局仓库配置
+              echo "" >> "$file"
+              echo "allprojects {" >> "$file"
+              echo "    repositories {" >> "$file"
+              echo "        google()" >> "$file"
+              echo "        mavenCentral()" >> "$file"
+              echo "    }" >> "$file"
+              echo "}" >> "$file"
             fi
           done
 
-          # Kotlin DSL 文件注入规则
-          KOTLIN_INJECT=$(cat <<EOF
-
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          EOF
-          )
-
-          # 遍历所有 build.gradle.kts 文件
-          for file in $(find . -name "build.gradle.kts"); do
-            echo "Processing Kotlin file: $file"
-            if ! grep -q "google()" "$file" 2>/dev/null; then
-              echo "$KOTLIN_INJECT" >> "$file"
+          # 针对 Kotlin DSL (.gradle.kts) 文件的替换逻辑
+          for file in $(find . -name "build.gradle.kts" ! -path "*/node_modules/*"); do
+            if [ -f "$file" ]; then
+              # 先删除原有的 repositories 块，防止冲突
+              sed -i '/^[[:space:]]*repositories[[:space:]]*{/,/^[[:space:]]*}/d' "$file"
+              # 在文件末尾追加全局仓库配置
+              echo "" >> "$file"
+              echo "allprojects {" >> "$file"
+              echo "    repositories {" >> "$file"
+              echo "        google()" >> "$file"
+              echo "        mavenCentral()" >> "$file"
+              echo "    }" >> "$file"
+              echo "}" >> "$file"
             fi
           done
 
       - name: Force Clean and Purge Cache
-        # 彻底清理项目旧文件和云端缓存，防止脏构建
         run: |
           rm -rf ~/.gradle/caches/
           rm -rf .gradle/
           gradle clean --no-daemon --stacktrace
 
       - name: Build APK (Release Build)
-        # 开始正式编译，带有详细的错误堆栈输出
-        run: gradle assembleDebug --no-daemon --stacktrace --info
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hooktool-debug-ultimate
+          name: hooktool-debug-final
           path: app/build/outputs/apk/debug/app-debug.apk
