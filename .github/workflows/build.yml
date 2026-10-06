@@ -1,4 +1,4 @@
-name: Build APK (Final Fix)
+name: Build APK (Bulletproof)
 
 on:
   push:
@@ -25,39 +25,18 @@ jobs:
           unzip -q gradle-8.4-bin.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Inject Repositories (Smart Replace)
+      - name: Inject Repositories (Safe & Simple)
         shell: bash
         run: |
-          # 针对 Groovy DSL (.gradle) 文件的替换逻辑
-          # 删除原有的 repositories 闭包，然后用一个全新的、无冲突的 allprojects 块替换
-          for file in $(find . -name "build.gradle" ! -path "*/node_modules/*"); do
-            if [ -f "$file" ]; then
-              # 先删除原有的 repositories 块，防止冲突
-              sed -i '/^[[:space:]]*repositories[[:space:]]*{/,/^[[:space:]]*}/d' "$file"
-              # 在文件末尾追加全局仓库配置
-              echo "" >> "$file"
-              echo "allprojects {" >> "$file"
-              echo "    repositories {" >> "$file"
-              echo "        google()" >> "$file"
-              echo "        mavenCentral()" >> "$file"
-              echo "    }" >> "$file"
-              echo "}" >> "$file"
-            fi
-          done
-
-          # 针对 Kotlin DSL (.gradle.kts) 文件的替换逻辑
-          for file in $(find . -name "build.gradle.kts" ! -path "*/node_modules/*"); do
-            if [ -f "$file" ]; then
-              # 先删除原有的 repositories 块，防止冲突
-              sed -i '/^[[:space:]]*repositories[[:space:]]*{/,/^[[:space:]]*}/d' "$file"
-              # 在文件末尾追加全局仓库配置
-              echo "" >> "$file"
-              echo "allprojects {" >> "$file"
-              echo "    repositories {" >> "$file"
-              echo "        google()" >> "$file"
-              echo "        mavenCentral()" >> "$file"
-              echo "    }" >> "$file"
-              echo "}" >> "$file"
+          # 定义要追加的文本
+          INJECT_TEXT="allprojects { repositories { google(); mavenCentral() } }"
+          
+          # 查找并遍历所有的 build.gradle 和 build.gradle.kts 文件
+          for file in $(find . -name "build.gradle" -o -name "build.gradle.kts"); do
+            # 检查文件内容是否已经包含 repositories，如果没有，则在末尾追加一行
+            if ! grep -q "repositories" "$file"; then
+              echo "$INJECT_TEXT" >> "$file"
+              echo "Injected repositories into $file"
             fi
           done
 
@@ -67,11 +46,11 @@ jobs:
           rm -rf .gradle/
           gradle clean --no-daemon --stacktrace
 
-      - name: Build APK (Release Build)
-        run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon --stacktrace --info
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hooktool-debug-final
+          name: hooktool-debug-safe
           path: app/build/outputs/apk/debug/app-debug.apk
