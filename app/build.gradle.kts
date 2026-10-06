@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.hooktool"
+    namespace = "com.test.hooktool"
     compileSdk = 33
 
     defaultConfig {
-        applicationId = "com.example.hooktool"
+        applicationId = "com.test.hooktool"
         minSdk = 24
         targetSdk = 33
         versionCode = 1
@@ -27,4 +27,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+}
+dependencies {
+    compileOnly("de.robv.android.xposed:api:82")
 }
