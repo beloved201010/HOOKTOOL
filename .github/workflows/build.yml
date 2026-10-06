@@ -1,4 +1,4 @@
-name: Build APK (Xposed Final Fix)
+name: Build APK (Command Line Fix)
 
 on:
   push:
@@ -25,30 +25,18 @@ jobs:
           unzip -q gradle-8.4-bin.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Inject Xposed Repositories (Smart Inject)
-        shell: bash
-        run: |
-          # 针对所有 Gradle 配置文件，将 jitpack.io 仓库智能插入到 repositories 块中
-          for file in $(find . -name "build.gradle" -o -name "build.gradle.kts"); do
-            echo "Processing: $file"
-            # 检查是否已经包含 jitpack.io，如果没有，则在 repositories { 的下一行强制插入
-            if ! grep -q "jitpack.io" "$file"; then
-              # 使用 perl 进行安全的替换
-              perl -i -pe 's/repositories\s*\{/repositories {\n        maven { url "https://jitpack.io" }\n/g' "$file"
-            fi
-          done
-
       - name: Force Clean and Purge Cache
         run: |
           rm -rf ~/.gradle/caches/
           rm -rf .gradle/
           gradle clean --no-daemon --stacktrace
 
-      - name: Build APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Build APK (Hardcoded Repos)
+        # 直接在命令行里用 -P 参数把仓库地址塞给 Gradle，彻底绕过项目文件的配置
+        run: gradle assembleDebug -Pallprojects.repositories="google(), mavenCentral(), maven { url 'https://jitpack.io' }" --no-daemon --stacktrace --info
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hooktool-debug-xposed
+          name: hooktool-debug-cli
           path: app/build/outputs/apk/debug/app-debug.apk
